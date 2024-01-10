@@ -83,6 +83,7 @@ fn app() -> Html {
 
     let life = use_state(|| 10);
     let is_playing = use_state(|| false);
+    let distance = use_state(|| 0_f64);
 
     let (w, h) = *map_size;
     // 初始化canvas
@@ -107,13 +108,14 @@ fn app() -> Html {
     }
     // 新的一局各种初始化
     {
-        clone_all![is_playing, pos, angle, history, obstacles];
+        clone_all![is_playing, pos, angle, history, obstacles, distance];
         use_effect_with(is_playing, move |is_playing| {
             if **is_playing {
                 pos.set(0.);
                 angle.set(0.);
                 history.set(vec![]);
                 obstacles.set(vec![]);
+                distance.set(0.);
             }
         });
     }
@@ -143,7 +145,9 @@ fn app() -> Html {
 
     // 核心部分，每过一帧计算运动
     {
-        clone_all![canvas_ctx, angle, bird_image, is_flying, pos, history, is_playing, life];
+        clone_all![
+            canvas_ctx, angle, bird_image, is_flying, pos, history, is_playing, life, distance
+        ];
         use_interval(
             move || {
                 if let Some(ctx) = canvas_ctx.as_ref() {
@@ -196,14 +200,17 @@ fn app() -> Html {
                             return;
                         }
                         let curr_obstacles = obstacles.iter().find(|ob| {
-                            ob.x - BIRD_SIZE / CHECK_RANGE < ox && ox < ob.x + OB_WIDTH + BIRD_SIZE / CHECK_RANGE
+                            ob.x - BIRD_SIZE / CHECK_RANGE < ox
+                                && ox < ob.x + OB_WIDTH + BIRD_SIZE / CHECK_RANGE
                         });
                         let (min_pos, max_pos) = if let Some(ob) = curr_obstacles {
                             (ob.y1 - oy, ob.y2 - oy)
                         } else {
                             (0. - oy, h - oy)
                         };
-                        if *pos + BIRD_SIZE / CHECK_RANGE > max_pos || *pos - BIRD_SIZE / CHECK_RANGE < min_pos {
+                        if *pos + BIRD_SIZE / CHECK_RANGE > max_pos
+                            || *pos - BIRD_SIZE / CHECK_RANGE < min_pos
+                        {
                             is_playing.set(false);
                             life.set(*life - 1);
                         }
@@ -217,6 +224,7 @@ fn app() -> Html {
                                 .take(HISTORY_LEN)
                                 .collect::<Vec<(f64, f64)>>(),
                         );
+                        distance.set(*distance + xl);
 
                         let mut new_obstacles: Vec<Obstacle> = obstacles
                             .iter()
@@ -258,6 +266,7 @@ fn app() -> Html {
             />
             <img id="birdImage" src="static/bird.webp" onload={img_onload} />
             <span id="lifeCnt"> {*life} </span>
+            <span id="score"> {format!("{:0>9}", (*distance * 2. / w) as u32)}</span>
         </>
     }
 }
