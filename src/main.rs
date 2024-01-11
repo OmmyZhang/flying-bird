@@ -16,7 +16,7 @@ use yew_hooks::use_interval;
 const BG_COLOR: u8 = 240;
 const OB_COLOR: u8 = 100;
 const BIRD_SIZE: f64 = 120.;
-const CHECK_SIZE: f64 = BIRD_SIZE / 2.;
+const CHECK_SIZE: f64 = BIRD_SIZE / 2.0 + 5.0;
 const OB_WIDTH: f64 = 100.;
 const HISTORY_LEN: usize = 120;
 const HISTORY_COLOR_CHANGE: usize = 7;
@@ -25,6 +25,8 @@ const INTERV: u32 = 17;
 const V: f64 = 10.;
 const ROTATE_UP: f64 = -0.05;
 const ROTATE_DOWN_D: f64 = 0.35;
+
+const N_LIFES: u32 = 10;
 
 macro_rules! clone_all {
     [$($s:ident), *] => {
@@ -89,9 +91,9 @@ fn app() -> Html {
     let history = use_state(Vec::<(f64, f64)>::new);
     let obstacles = use_state(Vec::<Obstacle>::new);
 
-    let life = use_state(|| 10);
+    let life = use_state(|| N_LIFES);
     let is_playing = use_state(|| false);
-    let distance = use_state(|| 0_f64);
+    let score = use_state(|| 0_u32);
 
     let (w, h) = *map_size;
     // 初始化canvas
@@ -126,14 +128,14 @@ fn app() -> Html {
     }
     // 新的一局各种初始化
     {
-        clone_all![is_playing, pos, angle, history, obstacles, distance];
+        clone_all![is_playing, pos, angle, history, obstacles, score];
         use_effect_with(is_playing, move |is_playing| {
             if **is_playing {
                 pos.set(0.);
                 angle.set(0.);
                 history.set(vec![]);
                 obstacles.set(vec![]);
-                distance.set(0.);
+                score.set(0);
             }
         });
     }
@@ -163,14 +165,12 @@ fn app() -> Html {
 
     // 核心部分，每过一帧计算运动
     {
-        clone_all![
-            canvas_ctx, angle, bird_image, is_flying, pos, history, is_playing, life, distance
-        ];
+        clone_all![canvas_ctx, angle, bird_image, is_flying, pos, history, is_playing, life, score];
         use_interval(
             move || {
                 if let Some(ctx) = canvas_ctx.as_ref() {
                     if let Some(bird) = bird_image.as_ref() {
-                        if !*is_playing && distance.abs() > 1e-10 {
+                        if !*is_playing && *life < N_LIFES {
                             return;
                         }
 
@@ -254,39 +254,27 @@ fn app() -> Html {
                                             -1.0,
                                             (h - start_y).min(2.0 * CHECK_SIZE),
                                         )
-                                        .unwrap()
-                                        .data()
-                                        .0
-                                        .iter()
-                                        .any(|v| *v < 50)
+                                        .map(|idata| idata.data().0.iter().any(|v| *v < 50))
+                                        .unwrap_or(false)
                                             || ctx
                                                 .get_image_data(
-                                                    ob.x + OB_WIDTH,
+                                                    ob.x + OB_WIDTH + 1.0,
                                                     start_y,
                                                     1.0,
                                                     (h - start_y).min(2.0 * CHECK_SIZE),
                                                 )
-                                                .unwrap()
-                                                .data()
-                                                .0
-                                                .iter()
-                                                .any(|v| *v < 50)
+                                                .map(|idata| idata.data().0.iter().any(|v| *v < 50))
+                                                .unwrap_or(false)
                                             || ctx
                                                 .get_image_data(ob.x, ob.y2, OB_WIDTH, -1.)
-                                                .unwrap()
-                                                .data()
-                                                .0
-                                                .iter()
-                                                .any(|v| *v < 50)
+                                                .map(|idata| idata.data().0.iter().any(|v| *v < 50))
+                                                .unwrap_or(false)
                                     })
                                     .unwrap_or(false)
                                     || ctx
                                         .get_image_data(ox - CHECK_SIZE, h, 2.0 * CHECK_SIZE, -1.0)
-                                        .unwrap()
-                                        .data()
-                                        .0
-                                        .iter()
-                                        .any(|v| *v < 50)
+                                        .map(|idata| idata.data().0.iter().any(|v| *v < 50))
+                                        .unwrap_or(false)
                             );
                         let up_collision = pos_y - CHECK_SIZE < min_pos
                             && (curr_obstacles
@@ -298,23 +286,17 @@ fn app() -> Html {
                                         -1.0,
                                         (ob.y1 - start_y).min(2.0 * CHECK_SIZE),
                                     )
-                                    .unwrap()
-                                    .data()
-                                    .0
-                                    .iter()
-                                    .any(|v| *v < 50)
+                                    .map(|idata| idata.data().0.iter().any(|v| *v < 50))
+                                    .unwrap_or(false)
                                         || ctx
                                             .get_image_data(
-                                                ob.x + OB_WIDTH,
+                                                ob.x + OB_WIDTH + 1.0,
                                                 start_y,
                                                 1.0,
                                                 (ob.y1 - start_y).min(2.0 * CHECK_SIZE),
                                             )
-                                            .unwrap()
-                                            .data()
-                                            .0
-                                            .iter()
-                                            .any(|v| *v < 50)
+                                            .map(|idata| idata.data().0.iter().any(|v| *v < 50))
+                                            .unwrap_or(false)
                                         || ctx
                                             .get_image_data(ob.x, ob.y1, OB_WIDTH, 1.0)
                                             .unwrap()
@@ -326,11 +308,8 @@ fn app() -> Html {
                                 .unwrap_or(false)
                                 || ctx
                                     .get_image_data(ox - CHECK_SIZE, 0.0, 2.0 * CHECK_SIZE, 1.0)
-                                    .unwrap()
-                                    .data()
-                                    .0
-                                    .iter()
-                                    .any(|v| *v < 50));
+                                    .map(|idata| idata.data().0.iter().any(|v| *v < 50))
+                                    .unwrap_or(false));
 
                         if down_collision || up_collision {
                             is_playing.set(false);
@@ -338,7 +317,7 @@ fn app() -> Html {
                             /*
                             if let Some(ob) = curr_obstacles {
                                 ctx.set_fill_style(&JsValue::from_str("red"));
-                                if pos_y + CHECK_SIZE > max_pos {
+                                if down_collision {
                                     let start_y = (pos_y - CHECK_SIZE).max(ob.y2);
                                     ctx.fill_rect(
                                         ob.x,
@@ -349,12 +328,18 @@ fn app() -> Html {
                                     ctx.fill_rect(ob.x, ob.y2, OB_WIDTH, -1.0);
                                 }
 
-                                if pos_y - CHECK_SIZE < min_pos {
+                                if up_collision {
                                     let start_y = (pos_y - CHECK_SIZE).max(0.0);
                                     ctx.fill_rect(
                                         ob.x,
                                         start_y,
-                                        -1.0,
+                                        -5.0,
+                                        (ob.y1 - start_y).min(2.0 * CHECK_SIZE),
+                                    );
+                                    ctx.fill_rect(
+                                        ob.x + OB_WIDTH + 1.0,
+                                        start_y,
+                                        5.0,
                                         (ob.y1 - start_y).min(2.0 * CHECK_SIZE),
                                     );
                                     ctx.fill_rect(ob.x, ob.y1, OB_WIDTH, 1.0);
@@ -380,8 +365,12 @@ fn app() -> Html {
                                 .take(HISTORY_LEN)
                                 .collect::<Vec<(f64, f64)>>(),
                         );
-                        distance.set(*distance + xl);
 
+                        if let Some(ob) = curr_obstacles {
+                            if ox < ob.x + OB_WIDTH && ox + xl > ob.x + OB_WIDTH {
+                                score.set(*score + 1);
+                            }
+                        }
                         let mut new_obstacles: Vec<Obstacle> = obstacles
                             .iter()
                             .map(|ob| Obstacle {
@@ -417,7 +406,7 @@ fn app() -> Html {
             />
             <img id="birdImage" src="static/bird.webp" onload={img_onload} />
             <span id="lifeCnt"> {*life} </span>
-            <span id="score"> {format!("{:0>9}", (*distance * 2. / w) as u32)}</span>
+            <span id="score"> {format!("{:0>9}", *score)}</span>
             if !*is_playing {
                 <div id="hint">
                     <p>{ "Tap the screen or press any key to fly" }</p>
