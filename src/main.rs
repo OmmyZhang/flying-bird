@@ -14,13 +14,13 @@ use yew_hooks::use_interval;
 
 const BIRD_SIZE: f64 = 120.;
 const OB_WIDTH: f64 = 100.;
-const V: f64 = 15.;
 const HISTORY_LEN: usize = 120;
 const MIN_SPACE: f64 = 3. * BIRD_SIZE;
-const INTERV: u32 = 40;
+const INTERV: u32 = 33;
 const CHECK_RANGE: f64 = 2.5;
+const V: f64 = 15.;
 const ROTATE_UP: f64 = -0.05;
-const ROTATE_DOWN: f64 = 0.03;
+const ROTATE_DOWN_D: f64 = 1.;
 
 macro_rules! clone_all {
     [$($s:ident), *] => {
@@ -218,9 +218,15 @@ fn app() -> Html {
                             life.set(*life - 1);
                         }
 
-                        let (xl, yl) = (V * f64::cos(*angle), V * f64::sin(*angle));
+                        let (sin, cos) = angle.sin_cos();
+                        let (xl, yl) = (V * cos, V * sin);
                         pos.set(*pos + yl);
-                        angle.set(*angle + if *is_flying { ROTATE_UP } else { ROTATE_DOWN });
+                        angle.set(if *is_flying {
+                            *angle + ROTATE_UP
+                        } else {
+                            (yl + ROTATE_DOWN_D).atan2(xl)
+                            //*angle - ROTATE_UP
+                        });
                         history.set(
                             iter::once((0., 0.))
                                 .chain(history.iter().map(|(x, y)| (x - xl, y - yl)))
