@@ -26,7 +26,7 @@ const V: f64 = 10.;
 const ROTATE_UP: f64 = -0.05;
 const ROTATE_DOWN_D: f64 = 0.35;
 
-const N_LIFES: u32 = 10;
+const N_LIFES: i32 = 10;
 
 macro_rules! clone_all {
     [$($s:ident), *] => {
@@ -56,18 +56,18 @@ struct Obstacle {
 }
 
 impl Obstacle {
-    pub fn random_gen(last: Option<&Obstacle>, w: f64, h: f64) -> Self {
+    pub fn random_gen(last: Option<&Obstacle>, w: f64, h: f64, score: u32) -> Self {
         let mut rng = thread_rng();
-        let x = w + rng.gen_range(0.0..5.0 * OB_WIDTH);
+        let dis = rng.gen_range(0.0..(6.0 - score as f64 / 2.0).max(4.0) * OB_WIDTH)
+            + (5.0 - score as f64 / 5.0).max(2.0) * OB_WIDTH;
         let last_y1 = last.map(|ob| ob.y1).unwrap_or(h / 3.0);
 
         let space = rng.gen_range(MIN_SPACE..2.0 * MIN_SPACE);
-        let y1 = rng.gen_range(
-            (last_y1 - 5.0 * BIRD_SIZE).max(0.0)..(last_y1 + 5.0 * BIRD_SIZE).min(h - space),
-        );
+        let y1 =
+            rng.gen_range((last_y1 - 2.0 * dis).max(0.0)..(last_y1 + 2.0 * dis).min(h - space));
 
         Self {
-            x,
+            x: w + dis,
             y1,
             y2: y1 + space,
         }
@@ -381,8 +381,13 @@ fn app() -> Html {
                             .filter(|ob| ob.x > -w)
                             .collect();
 
-                        if obstacles.last().map(|ob| ob.x).unwrap_or_default() < w - 2. * OB_WIDTH {
-                            new_obstacles.push(Obstacle::random_gen(obstacles.last(), w, h));
+                        if obstacles.last().map(|ob| ob.x).unwrap_or_default() < w {
+                            new_obstacles.push(Obstacle::random_gen(
+                                obstacles.last(),
+                                w,
+                                h,
+                                *score,
+                            ));
                         }
                         obstacles.set(new_obstacles);
                     }
