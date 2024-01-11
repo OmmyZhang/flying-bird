@@ -24,7 +24,8 @@ const HISTORY_LEN: usize = 120;
 const HISTORY_COLOR_CHANGE: usize = 7;
 const MIN_SPACE: f64 = 3. * BIRD_SIZE;
 const INTERV: u32 = 17;
-const V: f64 = 10.;
+const V_MIN_2: f64 = 0.0;
+const V_MAX_2: f64 = 200.0;
 const ROTATE_UP: f64 = -0.05;
 const ROTATE_DOWN_D: f64 = 0.35;
 
@@ -379,8 +380,11 @@ fn app() -> Html {
                         }
 
                         // 计算运动
+                        let v = (V_MIN_2 + (pos_y / h) * (V_MAX_2 - V_MIN_2)).sqrt();
+
+                        //console::log_1(&JsValue::from_str(&format!("{}", v)));
                         let (sin, cos) = angle.sin_cos();
-                        let (xl, yl) = (V * cos, V * sin);
+                        let (xl, yl) = (v * cos, v * sin);
                         pos.set(*pos + yl);
                         angle.set(if *is_flying {
                             *angle + ROTATE_UP
