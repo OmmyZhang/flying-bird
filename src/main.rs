@@ -5,7 +5,8 @@ use rand::{thread_rng, Rng};
 use serde::Serialize;
 use wasm_bindgen::JsValue;
 use web_sys::{
-    console, window, CanvasRenderingContext2d, Event, HtmlCanvasElement, HtmlImageElement,
+    console, window, CanvasRenderingContext2d, Event, HtmlAudioElement, HtmlCanvasElement,
+    HtmlImageElement,
 };
 use yew::{
     callback::Callback, function_component, html, use_effect_with, use_memo, use_node_ref,
@@ -80,6 +81,10 @@ impl Obstacle {
 #[function_component(App)]
 fn app() -> Html {
     let canvas_ref = use_node_ref();
+    let audio_ref = use_node_ref();
+    let audio_wall_ref = use_node_ref();
+    let audio_after_ref = use_node_ref();
+
     let map_size = use_memo((), |_| {
         let window = window().unwrap();
         let width = window.inner_width().unwrap().as_f64().unwrap();
@@ -133,7 +138,17 @@ fn app() -> Html {
     }
     // 新的一局各种初始化
     {
-        clone_all![is_playing, pos, angle, history, obstacles, score];
+        clone_all![
+            is_playing,
+            pos,
+            angle,
+            history,
+            obstacles,
+            score,
+            audio_ref,
+            audio_wall_ref,
+            audio_after_ref
+        ];
         use_effect_with(is_playing, move |is_playing| {
             if **is_playing {
                 pos.set(0.);
@@ -141,6 +156,24 @@ fn app() -> Html {
                 history.set(vec![]);
                 obstacles.set(vec![]);
                 score.set(0);
+
+                if let Some(audio) = audio_ref.cast::<HtmlAudioElement>() {
+                    audio.set_current_time(0.0);
+                    audio.set_volume(0.5);
+                    let _ = audio.play().unwrap();
+                }
+            } else {
+                if let Some(audio) = audio_ref.cast::<HtmlAudioElement>() {
+                    audio.pause().unwrap();
+                }
+                if let Some(audio) = audio_wall_ref.cast::<HtmlAudioElement>() {
+                    audio.set_volume(1.0);
+                    let _ = audio.play().unwrap();
+                }
+                if let Some(audio) = audio_after_ref.cast::<HtmlAudioElement>() {
+                    audio.set_volume(0.15);
+                    let _ = audio.play().unwrap();
+                }
             }
         });
     }
@@ -442,6 +475,15 @@ fn app() -> Html {
                 onpointerdown={make_cb!(start_fly_core)}
                 onpointerup={make_cb!(end_fly_core)}
             />
+            <audio loop={true} ref={audio_ref}>
+                <source src="static/fantasy_world.mp3" type="audio/mpeg" />
+            </audio>
+            <audio ref={audio_wall_ref}>
+                <source src="static/hitting_wall.mp3" type="audio/mpeg" />
+            </audio>
+            <audio ref={audio_after_ref}>
+                <source src="static/string_end.mp3" type="audio/mpeg" />
+            </audio>
             <div class="no-select">
                 <img id="birdImage" src="static/bird.webp" onload={img_onload} />
                 <span id="lifeCnt"> {*life} </span>
