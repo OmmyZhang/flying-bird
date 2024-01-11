@@ -442,7 +442,7 @@ fn app() -> Html {
             <span id="lifeCnt" class="no-select"> {*life} </span>
             <span id="score" class="no-select"> {format!("{:0>9}", *score)}</span>
             if !*is_playing {
-                <div id="hint">
+                <div id="hint" class="no-select">
                     <p>{ "Tap the screen or press any key to fly" }</p>
                 </div>
                 if *life == N_LIFES {
