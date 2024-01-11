@@ -438,16 +438,38 @@ fn app() -> Html {
                 onpointerdown={make_cb!(start_fly_core)}
                 onpointerup={make_cb!(end_fly_core)}
             />
-            <img id="birdImage" src="static/bird.webp" onload={img_onload} />
-            <span id="lifeCnt"> {*life} </span>
-            <span id="score"> {format!("{:0>9}", *score)}</span>
+            <img id="birdImage" class="no-select" src="static/bird.webp" onload={img_onload} />
+            <span id="lifeCnt" class="no-select"> {*life} </span>
+            <span id="score" class="no-select"> {format!("{:0>9}", *score)}</span>
             if !*is_playing {
                 <div id="hint">
                     <p>{ "Tap the screen or press any key to fly" }</p>
                 </div>
+                if *life == N_LIFES {
+                    <div id="badges">
+                        <a href="https://notbyai.fyi/">
+                            <img
+                                src="https://notbyai.fyi/img/written-by-human-not-by-ai-white.svg"
+                                alt="written by human, not by AI"
+                            />
+                        </a>
+                        <a href="https://github.com/OmmyZhang/flying-bird">
+                            <img
+                                src="https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
+                                alt="GitHub"
+                            />
+                        </a>
+                        <a href="https://www.gnu.org/licenses/licenses.html#AGPL">
+                            <img
+                                src="https://www.gnu.org/graphics/agplv3-155x51.png"
+                                alt="AGPL license"
+                            />
+                        </a>
+                    </div>
+                }
             }
             if *comming_obstacles_distance > 0 {
-                <span id="next">{ *comming_obstacles_distance } { "m" }</span>
+                <span id="next" class="no-select">{ *comming_obstacles_distance } { "m" }</span>
             }
         </>
     }

@@ -39,7 +39,21 @@ canvas {
   font-size: 16px;
 }
 
-img, span, div {
+#badges {
+  position: fixed;
+  width: 100%;
+  left: 0;
+  bottom: 50px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+#badges img {
+  height: 30px;
+}
+
+.no-select {
   pointer-events: none;
   user-select: none;
 }
