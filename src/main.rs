@@ -1,7 +1,8 @@
-use std::cmp::{max, min};
 use std::iter;
 
+use gloo_utils::format::JsValueSerdeExt;
 use rand::{thread_rng, Rng};
+use serde::Serialize;
 use wasm_bindgen::JsValue;
 use web_sys::{
     console, window, CanvasRenderingContext2d, Event, HtmlCanvasElement, HtmlImageElement,
@@ -12,15 +13,18 @@ use yew::{
 };
 use yew_hooks::use_interval;
 
+const BG_COLOR: u8 = 240;
+const OB_COLOR: u8 = 100;
 const BIRD_SIZE: f64 = 120.;
+const CHECK_SIZE: f64 = BIRD_SIZE / 2.;
 const OB_WIDTH: f64 = 100.;
 const HISTORY_LEN: usize = 120;
+const HISTORY_COLOR_CHANGE: usize = 7;
 const MIN_SPACE: f64 = 3. * BIRD_SIZE;
-const INTERV: u32 = 33;
-const CHECK_RANGE: f64 = 2.5;
-const V: f64 = 15.;
+const INTERV: u32 = 17;
+const V: f64 = 10.;
 const ROTATE_UP: f64 = -0.05;
-const ROTATE_DOWN_D: f64 = 1.;
+const ROTATE_DOWN_D: f64 = 0.35;
 
 macro_rules! clone_all {
     [$($s:ident), *] => {
@@ -37,6 +41,12 @@ macro_rules! make_cb {
     }};
 }
 
+#[derive(Serialize)]
+#[serde(rename_all(serialize = "camelCase"))]
+struct ContextOtions {
+    pub will_read_frequently: bool,
+}
+
 struct Obstacle {
     x: f64,
     y1: f64,
@@ -46,23 +56,19 @@ struct Obstacle {
 impl Obstacle {
     pub fn random_gen(last: Option<&Obstacle>, w: f64, h: f64) -> Self {
         let mut rng = thread_rng();
-        let x = w + rng.gen_range(0. ..5. * OB_WIDTH);
-        let last_y1 = last.map(|ob| ob.y1).unwrap_or(h / 3.) as i32;
-        let last_y2 = last.map(|ob| ob.y2).unwrap_or(h * 2. / 3.) as i32;
+        let x = w + rng.gen_range(0.0..5.0 * OB_WIDTH);
+        let last_y1 = last.map(|ob| ob.y1).unwrap_or(h / 3.0);
+
+        let space = rng.gen_range(MIN_SPACE..2.0 * MIN_SPACE);
         let y1 = rng.gen_range(
-            max(0, last_y1 - 5 * BIRD_SIZE as i32) as f64
-                ..min(h as i32, last_y1 + 5 * BIRD_SIZE as i32) as f64,
-        );
-        let y2 = rng.gen_range(
-            max(0, last_y2 - 5 * BIRD_SIZE as i32) as f64
-                ..min(h as i32, last_y2 + 5 * BIRD_SIZE as i32) as f64,
+            (last_y1 - 5.0 * BIRD_SIZE).max(0.0)..(last_y1 + 5.0 * BIRD_SIZE).min(h - space),
         );
 
-        if y2 - y1 < MIN_SPACE || y2 - y1 > 2.0 * MIN_SPACE {
-            return Obstacle::random_gen(last, w, h);
+        Self {
+            x,
+            y1,
+            y2: y1 + space,
         }
-
-        Self { x, y1, y2 }
     }
 }
 
@@ -103,7 +109,16 @@ fn app() -> Html {
             canvas.focus().unwrap();
 
             let ctx = CanvasRenderingContext2d::from(JsValue::from(
-                canvas.get_context("2d").unwrap().unwrap(),
+                canvas
+                    .get_context_with_context_options(
+                        "2d",
+                        &JsValue::from_serde(&ContextOtions {
+                            will_read_frequently: true,
+                        })
+                        .unwrap(),
+                    )
+                    .unwrap()
+                    .unwrap(),
             ));
 
             canvas_ctx.set(Some(ctx));
@@ -155,13 +170,20 @@ fn app() -> Html {
             move || {
                 if let Some(ctx) = canvas_ctx.as_ref() {
                     if let Some(bird) = bird_image.as_ref() {
-                        ctx.set_fill_style(&JsValue::from_str("#e0e0e0"));
+                        if !*is_playing && distance.abs() > 1e-10 {
+                            return;
+                        }
+
+                        ctx.set_fill_style(&JsValue::from_str(&format!(
+                            "rgb({BG_COLOR}, {BG_COLOR}, {BG_COLOR})"
+                        )));
                         ctx.fill_rect(0., 0., w, h);
                         ctx.save();
 
+                        // 画轨迹 && 画鸟
                         let (ox, oy) = (w / 3., h / 2.);
-
-                        ctx.translate(ox, oy + *pos).unwrap();
+                        let pos_y = oy + *pos;
+                        ctx.translate(ox, pos_y).unwrap();
 
                         ctx.set_stroke_style(&JsValue::from_str("white"));
                         ctx.set_line_width(3.);
@@ -170,11 +192,11 @@ fn app() -> Html {
                         for (x, y) in history.iter() {
                             ctx.line_to(*x, *y);
                             cnt += 1;
-                            if cnt % 3 == 0 {
+                            if cnt % HISTORY_COLOR_CHANGE == 0 {
                                 ctx.stroke();
-                                let new_color = 255 - cnt / 3;
+                                let new_color = 255 - cnt / HISTORY_COLOR_CHANGE;
                                 ctx.set_stroke_style(&JsValue::from_str(&format!(
-                                    "rgba({new_color}, {new_color}, {new_color})"
+                                    "rgb({new_color}, {new_color}, {new_color})"
                                 )));
                                 ctx.begin_path();
                                 ctx.move_to(*x, *y);
@@ -193,7 +215,10 @@ fn app() -> Html {
                         .expect("draw bird failed");
                         ctx.restore();
 
-                        ctx.set_fill_style(&JsValue::from_str("#505050"));
+                        // 画障碍物
+                        ctx.set_fill_style(&JsValue::from_str(&format!(
+                            "rgb({OB_COLOR}, {OB_COLOR}, {OB_COLOR})"
+                        )));
                         for Obstacle { x, y1, y2 } in obstacles.iter() {
                             ctx.fill_rect(*x, 0., OB_WIDTH, *y1);
                             ctx.fill_rect(*x, *y2, OB_WIDTH, h - *y2);
@@ -202,22 +227,144 @@ fn app() -> Html {
                         if !*is_playing {
                             return;
                         }
-                        let curr_obstacles = obstacles.iter().find(|ob| {
-                            ob.x - BIRD_SIZE / CHECK_RANGE < ox
-                                && ox < ob.x + OB_WIDTH + BIRD_SIZE / CHECK_RANGE
-                        });
+
+                        // 检查是否撞击
+                        // 初筛
+                        let curr_obstacles = obstacles
+                            .iter()
+                            .find(|ob| ob.x - CHECK_SIZE < ox && ox < ob.x + OB_WIDTH + CHECK_SIZE);
                         let (min_pos, max_pos) = if let Some(ob) = curr_obstacles {
-                            (ob.y1 - oy, ob.y2 - oy)
+                            (ob.y1, ob.y2)
                         } else {
-                            (0. - oy, h - oy)
+                            (0.0, h)
                         };
-                        if *pos + BIRD_SIZE / CHECK_RANGE > max_pos
-                            || *pos - BIRD_SIZE / CHECK_RANGE < min_pos
-                        {
+
+                        let down_collision = pos_y + CHECK_SIZE > max_pos
+                            && (
+                                // 细筛
+                                curr_obstacles
+                                    .map(|ob| {
+                                        // 读出来的rgb会有变化，先不用处理，
+                                        // colorSpace: "display-p3" 浏览器还没都支持
+                                        // https://stackoverflow.com/questions/70480792/getimagedata-does-not-return-correct-rgb-values-display-p3-image
+                                        let start_y = (pos_y - CHECK_SIZE).max(ob.y2);
+                                        ctx.get_image_data(
+                                            ob.x,
+                                            start_y,
+                                            -1.0,
+                                            (h - start_y).min(2.0 * CHECK_SIZE),
+                                        )
+                                        .unwrap()
+                                        .data()
+                                        .0
+                                        .iter()
+                                        .any(|v| *v < 50)
+                                            || ctx
+                                                .get_image_data(
+                                                    ob.x + OB_WIDTH,
+                                                    start_y,
+                                                    1.0,
+                                                    (h - start_y).min(2.0 * CHECK_SIZE),
+                                                )
+                                                .unwrap()
+                                                .data()
+                                                .0
+                                                .iter()
+                                                .any(|v| *v < 50)
+                                            || ctx
+                                                .get_image_data(ob.x, ob.y2, OB_WIDTH, -1.)
+                                                .unwrap()
+                                                .data()
+                                                .0
+                                                .iter()
+                                                .any(|v| *v < 50)
+                                    })
+                                    .unwrap_or(false)
+                                    || ctx
+                                        .get_image_data(ox - CHECK_SIZE, h, 2.0 * CHECK_SIZE, -1.0)
+                                        .unwrap()
+                                        .data()
+                                        .0
+                                        .iter()
+                                        .any(|v| *v < 50)
+                            );
+                        let up_collision = pos_y - CHECK_SIZE < min_pos
+                            && (curr_obstacles
+                                .map(|ob| {
+                                    let start_y = (pos_y - CHECK_SIZE).max(0.0);
+                                    ctx.get_image_data(
+                                        ob.x,
+                                        start_y,
+                                        -1.0,
+                                        (ob.y1 - start_y).min(2.0 * CHECK_SIZE),
+                                    )
+                                    .unwrap()
+                                    .data()
+                                    .0
+                                    .iter()
+                                    .any(|v| *v < 50)
+                                        || ctx
+                                            .get_image_data(
+                                                ob.x + OB_WIDTH,
+                                                start_y,
+                                                1.0,
+                                                (ob.y1 - start_y).min(2.0 * CHECK_SIZE),
+                                            )
+                                            .unwrap()
+                                            .data()
+                                            .0
+                                            .iter()
+                                            .any(|v| *v < 50)
+                                        || ctx
+                                            .get_image_data(ob.x, ob.y1, OB_WIDTH, 1.0)
+                                            .unwrap()
+                                            .data()
+                                            .0
+                                            .iter()
+                                            .any(|v| *v < 50)
+                                })
+                                .unwrap_or(false)
+                                || ctx
+                                    .get_image_data(ox - CHECK_SIZE, 0.0, 2.0 * CHECK_SIZE, 1.0)
+                                    .unwrap()
+                                    .data()
+                                    .0
+                                    .iter()
+                                    .any(|v| *v < 50));
+
+                        if down_collision || up_collision {
                             is_playing.set(false);
                             life.set(*life - 1);
+                            /*
+                            if let Some(ob) = curr_obstacles {
+                                ctx.set_fill_style(&JsValue::from_str("red"));
+                                if pos_y + CHECK_SIZE > max_pos {
+                                    let start_y = (pos_y - CHECK_SIZE).max(ob.y2);
+                                    ctx.fill_rect(
+                                        ob.x,
+                                        start_y,
+                                        -1.0,
+                                        (h - start_y).min(2.0 * CHECK_SIZE),
+                                    );
+                                    ctx.fill_rect(ob.x, ob.y2, OB_WIDTH, -1.0);
+                                }
+
+                                if pos_y - CHECK_SIZE < min_pos {
+                                    let start_y = (pos_y - CHECK_SIZE).max(0.0);
+                                    ctx.fill_rect(
+                                        ob.x,
+                                        start_y,
+                                        -1.0,
+                                        (ob.y1 - start_y).min(2.0 * CHECK_SIZE),
+                                    );
+                                    ctx.fill_rect(ob.x, ob.y1, OB_WIDTH, 1.0);
+                                }
+                            }
+                            */
+                            return;
                         }
 
+                        // 计算运动
                         let (sin, cos) = angle.sin_cos();
                         let (xl, yl) = (V * cos, V * sin);
                         pos.set(*pos + yl);
@@ -237,20 +384,15 @@ fn app() -> Html {
 
                         let mut new_obstacles: Vec<Obstacle> = obstacles
                             .iter()
-                            .map(|Obstacle { x, y1, y2 }| Obstacle {
-                                x: *x - xl,
-                                y1: *y1,
-                                y2: *y2,
+                            .map(|ob| Obstacle {
+                                x: ob.x - xl,
+                                y1: ob.y1,
+                                y2: ob.y2,
                             })
-                            .filter(|Obstacle { x, y1: _, y2: _ }| *x > -OB_WIDTH)
+                            .filter(|ob| ob.x > -w)
                             .collect();
 
-                        if obstacles
-                            .last()
-                            .map(|Obstacle { x, y1: _, y2: _ }| *x)
-                            .unwrap_or_default()
-                            < w - 2. * OB_WIDTH
-                        {
+                        if obstacles.last().map(|ob| ob.x).unwrap_or_default() < w - 2. * OB_WIDTH {
                             new_obstacles.push(Obstacle::random_gen(obstacles.last(), w, h));
                         }
                         obstacles.set(new_obstacles);
