@@ -438,9 +438,11 @@ fn app() -> Html {
                 onpointerdown={make_cb!(start_fly_core)}
                 onpointerup={make_cb!(end_fly_core)}
             />
-            <img id="birdImage" class="no-select" src="static/bird.webp" onload={img_onload} />
-            <span id="lifeCnt" class="no-select"> {*life} </span>
-            <span id="score" class="no-select"> {format!("{:0>9}", *score)}</span>
+            <div class="no-select">
+                <img id="birdImage" src="static/bird.webp" onload={img_onload} />
+                <span id="lifeCnt"> {*life} </span>
+                <span id="score"> {format!("{:0>9}", *score)}</span>
+            </div>
             if !*is_playing {
                 <div id="hint" class="no-select">
                     <p>{ "Tap the screen or press any key to fly" }</p>
