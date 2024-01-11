@@ -15,9 +15,11 @@ use yew_hooks::use_interval;
 
 const BG_COLOR: u8 = 240;
 const OB_COLOR: u8 = 100;
+const NEXT_OB_COLOR: u8 = 190;
 const BIRD_SIZE: f64 = 120.;
 const CHECK_SIZE: f64 = BIRD_SIZE / 2.0 + 5.0;
 const OB_WIDTH: f64 = 100.;
+const NEXT_OB_WIDTH: f64 = 20.;
 const HISTORY_LEN: usize = 120;
 const HISTORY_COLOR_CHANGE: usize = 7;
 const MIN_SPACE: f64 = 3. * BIRD_SIZE;
@@ -90,6 +92,8 @@ fn app() -> Html {
     let is_flying = use_state(|| false);
     let history = use_state(Vec::<(f64, f64)>::new);
     let obstacles = use_state(Vec::<Obstacle>::new);
+
+    let comming_obstacles_distance = use_state(|| 0_u32);
 
     let life = use_state(|| N_LIFES);
     let is_playing = use_state(|| false);
@@ -165,7 +169,18 @@ fn app() -> Html {
 
     // 核心部分，每过一帧计算运动
     {
-        clone_all![canvas_ctx, angle, bird_image, is_flying, pos, history, is_playing, life, score];
+        clone_all![
+            canvas_ctx,
+            angle,
+            bird_image,
+            is_flying,
+            pos,
+            history,
+            is_playing,
+            life,
+            score,
+            comming_obstacles_distance
+        ];
         use_interval(
             move || {
                 if let Some(ctx) = canvas_ctx.as_ref() {
@@ -222,6 +237,20 @@ fn app() -> Html {
                         for Obstacle { x, y1, y2 } in obstacles.iter() {
                             ctx.fill_rect(*x, 0., OB_WIDTH, *y1);
                             ctx.fill_rect(*x, *y2, OB_WIDTH, h - *y2);
+                        }
+
+                        // 给预警
+                        if let Some(ob) = obstacles.iter().find(|ob| ob.x + OB_WIDTH > w) {
+                            if ob.x > w {
+                                comming_obstacles_distance.set(((ob.x - w) / 100.0) as u32);
+                                ctx.set_fill_style(&JsValue::from_str(&format!(
+                                    "rgb({NEXT_OB_COLOR}, {NEXT_OB_COLOR}, {NEXT_OB_COLOR})"
+                                )));
+                                ctx.fill_rect(w - NEXT_OB_WIDTH, 0.0, NEXT_OB_WIDTH, ob.y1);
+                                ctx.fill_rect(w - NEXT_OB_WIDTH, ob.y2, NEXT_OB_WIDTH, h - ob.y2);
+                            }
+                        } else {
+                            comming_obstacles_distance.set(0);
                         }
 
                         if !*is_playing {
@@ -416,6 +445,9 @@ fn app() -> Html {
                 <div id="hint">
                     <p>{ "Tap the screen or press any key to fly" }</p>
                 </div>
+            }
+            if *comming_obstacles_distance > 0 {
+                <span id="next">{ *comming_obstacles_distance } { "m" }</span>
             }
         </>
     }

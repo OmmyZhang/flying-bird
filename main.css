@@ -32,6 +32,13 @@ canvas {
   font-size: 24px;
 }
 
+#next {
+  position: fixed;
+  right: 10px;
+  top: calc(50% - 5px);
+  font-size: 16px;
+}
+
 img, span, div {
   pointer-events: none;
   user-select: none;
