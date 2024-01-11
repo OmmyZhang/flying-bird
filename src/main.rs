@@ -19,6 +19,8 @@ const HISTORY_LEN: usize = 120;
 const MIN_SPACE: f64 = 3. * BIRD_SIZE;
 const INTERV: u32 = 40;
 const CHECK_RANGE: f64 = 2.5;
+const ROTATE_UP: f64 = -0.05;
+const ROTATE_DOWN: f64 = 0.03;
 
 macro_rules! clone_all {
     [$($s:ident), *] => {
@@ -98,6 +100,7 @@ fn app() -> Html {
 
             canvas.set_width(w as u32);
             canvas.set_height(h as u32);
+            canvas.focus().unwrap();
 
             let ctx = CanvasRenderingContext2d::from(JsValue::from(
                 canvas.get_context("2d").unwrap().unwrap(),
@@ -217,7 +220,7 @@ fn app() -> Html {
 
                         let (xl, yl) = (V * f64::cos(*angle), V * f64::sin(*angle));
                         pos.set(*pos + yl);
-                        angle.set(*angle + if *is_flying { -0.03 } else { 0.02 });
+                        angle.set(*angle + if *is_flying { ROTATE_UP } else { ROTATE_DOWN });
                         history.set(
                             iter::once((0., 0.))
                                 .chain(history.iter().map(|(x, y)| (x - xl, y - yl)))
@@ -267,6 +270,11 @@ fn app() -> Html {
             <img id="birdImage" src="static/bird.webp" onload={img_onload} />
             <span id="lifeCnt"> {*life} </span>
             <span id="score"> {format!("{:0>9}", (*distance * 2. / w) as u32)}</span>
+            if !*is_playing {
+                <div id="hint">
+                    <p>{ "Tap the screen or press any key to fly" }</p>
+                </div>
+            }
         </>
     }
 }

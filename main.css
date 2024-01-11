@@ -20,3 +20,19 @@ canvas {
   margin: 15px;
   font-size: 24px;
 }
+
+#hint {
+  position: fixed;
+  width: 100%;
+  left: 0;
+  bottom: 150px;
+  text-align: center;
+  padding: 0 15px;
+  box-sizing: border-box;
+  font-size: 36px;
+}
+
+img, span, div {
+  pointer-events: none;
+  user-select: none;
+}
