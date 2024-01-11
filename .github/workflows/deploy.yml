@@ -21,7 +21,7 @@ jobs:
         with:
           version: 'latest'
       - name: "Build"
-        run: trunk build --release --public-url="//cdn.jsdelivr.net/gh/ommyzhang/flying-bird@gh-pages/"
+        run: trunk build --release --public-url="//cdn.jsdelivr.net/gh/ommyzhang/flying-bird@gh-pages/" --no-sri
       - name: "Deploy"
         uses: peaceiris/actions-gh-pages@v3
         with:
