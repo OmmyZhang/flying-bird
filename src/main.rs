@@ -17,12 +17,15 @@ use yew_hooks::use_interval;
 const BG_COLOR: u8 = 240;
 const OB_COLOR: u8 = 100;
 const NEXT_OB_COLOR: u8 = 190;
+
 const BIRD_SIZE: f64 = 120.;
 const CHECK_SIZE: f64 = BIRD_SIZE / 2.0 + 5.0;
 const OB_WIDTH: f64 = 100.;
 const NEXT_OB_WIDTH: f64 = 20.;
+
 const HISTORY_LEN: usize = 250;
 const HISTORY_COLOR_CHANGE: usize = 15;
+
 const MIN_SPACE: f64 = 3. * BIRD_SIZE;
 const INTERV: u32 = 8;
 const V_MIN_2: f64 = 0.0;
@@ -31,6 +34,7 @@ const ROTATE_UP: f64 = -0.022;
 const ROTATE_DOWN_D: f64 = 0.12;
 
 const N_LIFES: i32 = 10;
+const RESTART_WATING_TIME: u32 = 2000;
 
 macro_rules! clone_all {
     [$($s:ident), *] => {
@@ -104,6 +108,7 @@ fn app() -> Html {
     let life = use_state(|| N_LIFES);
     let is_playing = use_state(|| false);
     let score = use_state(|| 0_u32);
+    let restart_waiting = use_state(|| 0_u32);
 
     let (w, h) = *map_size;
     // 初始化canvas
@@ -148,7 +153,8 @@ fn app() -> Html {
             life,
             audio_ref,
             audio_wall_ref,
-            audio_after_ref
+            audio_after_ref,
+            restart_waiting
         ];
         use_effect_with(is_playing, move |is_playing| {
             if **is_playing {
@@ -163,7 +169,9 @@ fn app() -> Html {
                     audio.set_volume(0.5);
                     let _ = audio.play().unwrap();
                 }
-            } else if *life < N_LIFES  {
+            } else if *life < N_LIFES {
+                console::log_1(&JsValue::from_str("Failed"));
+                restart_waiting.set(RESTART_WATING_TIME);
                 if let Some(audio) = audio_ref.cast::<HtmlAudioElement>() {
                     audio.pause().unwrap();
                 }
@@ -188,10 +196,15 @@ fn app() -> Html {
     };
 
     let start_fly_core = {
-        clone_all![is_flying, is_playing];
+        clone_all![is_flying, is_playing, restart_waiting];
         move || {
+            if *is_flying {
+                return;
+            }
             is_flying.set(true);
-            is_playing.set(true);
+            if *restart_waiting == 0 && !*is_playing {
+                is_playing.set(true);
+            }
         }
     };
 
@@ -214,13 +227,17 @@ fn app() -> Html {
             is_playing,
             life,
             score,
-            comming_obstacles_distance
+            comming_obstacles_distance,
+            restart_waiting
         ];
         use_interval(
             move || {
                 if let Some(ctx) = canvas_ctx.as_ref() {
                     if let Some(bird) = bird_image.as_ref() {
                         if !*is_playing && *life < N_LIFES {
+                            if *restart_waiting > 0 {
+                                restart_waiting.set(*restart_waiting - INTERV.min(*restart_waiting));
+                            }
                             return;
                         }
 
