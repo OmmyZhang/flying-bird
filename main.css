@@ -29,7 +29,7 @@ canvas {
   position: fixed;
   width: 100%;
   left: 0;
-  bottom: 150px;
+  bottom: 120px;
   text-align: center;
   padding: 0 15px;
   box-sizing: border-box;
@@ -60,7 +60,7 @@ canvas {
   bottom: 50px;
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 7px;
 }
 
 #badges img {

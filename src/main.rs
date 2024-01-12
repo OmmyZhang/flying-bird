@@ -610,6 +610,12 @@ fn app() -> Html {
                                 alt="GitHub"
                             />
                         </a>
+                        <a href="https://ymmo.itch.io/flying-bird">
+                            <img
+                                src="https://static.itch.io/images/badge.svg"
+                                alt="available on itch.io"
+                            />
+                        </a>
                         <a href="https://www.gnu.org/licenses/licenses.html#AGPL">
                             <img
                                 src="https://www.gnu.org/graphics/agplv3-155x51.png"

@@ -9,4 +9,7 @@ Flying Bird
 
 - Fantasy world by Alex-Productions | Creative Commons CC BY 3.0
 - String Ending by mriedl | Creative Commons 0
- 
+
+[play on itch.io](https://ymmo.itch.io/flying-bird)
+
+[play on Github Pages](https://ommyzhang.github.io/flying-bird/)
