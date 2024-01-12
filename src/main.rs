@@ -98,14 +98,15 @@ impl MapConfig {
 impl Obstacle {
     pub fn random_gen(last: Option<&Obstacle>, w: f64, h: f64, score: u32) -> Self {
         let mut rng = thread_rng();
-        let dis = rng.gen_range(0.0..(6.0 - score as f64).max(3.0) * OB_WIDTH)
+        let dis = rng.gen_range(0.0..(6.0 - score as f64).max(4.0) * OB_WIDTH)
             + (3.0 - score as f64).max(0.0) * OB_WIDTH;
         let last_y1 = last.map(|ob| ob.y1).unwrap_or(h / 3.0);
 
         let space = rng.gen_range(MIN_SPACE..1.5 * MIN_SPACE);
+        let max_dy = (dis / OB_WIDTH).powi(2) * BIRD_SIZE * 1.5;
         let y1 = rng.gen_range(
-            (last_y1 - 2.0 * dis).max(0.0).min(h - space - 1.0)
-                ..(last_y1 + 2.0 * dis).min(h - space),
+            (last_y1 - max_dy).max(0.0).min(h - space - 1.0)
+                ..(last_y1 + max_dy).min(h - space),
         );
 
         Self {
