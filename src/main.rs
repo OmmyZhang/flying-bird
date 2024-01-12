@@ -38,7 +38,7 @@ const ROTATE_UP: f64 = -0.022;
 const ROTATE_DOWN_D: f64 = 0.12;
 
 const N_LIFES: i32 = 10;
-const RESTART_WATING_TIME: u32 = 2000;
+const RESTART_WATING_TIME: u32 = 1500;
 
 macro_rules! clone_all {
     [$($s:ident), *] => {
@@ -98,16 +98,18 @@ impl MapConfig {
 impl Obstacle {
     pub fn random_gen(last: Option<&Obstacle>, w: f64, h: f64, score: u32) -> Self {
         let mut rng = thread_rng();
-        let dis = rng.gen_range(0.0..(6.0 - score as f64 / 2.0).max(3.0) * OB_WIDTH)
-            + (5.0 - score as f64 / 3.0).max(2.0) * OB_WIDTH;
+        let dis = rng.gen_range(0.0..(6.0 - score as f64).max(3.0) * OB_WIDTH)
+            + (3.0 - score as f64).max(0.0) * OB_WIDTH;
         let last_y1 = last.map(|ob| ob.y1).unwrap_or(h / 3.0);
 
-        let space = rng.gen_range(MIN_SPACE..2.0 * MIN_SPACE);
-        let y1 =
-            rng.gen_range((last_y1 - 2.0 * dis).max(0.0)..(last_y1 + 2.0 * dis).min(h - space));
+        let space = rng.gen_range(MIN_SPACE..1.5 * MIN_SPACE);
+        let y1 = rng.gen_range(
+            (last_y1 - 2.0 * dis).max(0.0).min(h - space - 1.0)
+                ..(last_y1 + 2.0 * dis).min(h - space),
+        );
 
         Self {
-            x: w + dis,
+            x: w + dis + 2.0 * OB_WIDTH,
             y1,
             y2: y1 + space,
         }
