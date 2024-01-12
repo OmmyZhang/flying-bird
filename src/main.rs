@@ -82,6 +82,22 @@ impl Obstacle {
     }
 }
 
+fn get_best_score() -> u32 {
+    let window = window().unwrap();
+    let storage = window.local_storage().unwrap().unwrap();
+    storage
+        .get_item("best_score")
+        .unwrap()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0)
+}
+
+fn set_best_score(score: u32) {
+    let window = window().unwrap();
+    let storage = window.local_storage().unwrap().unwrap();
+    storage.set_item("best_score", &score.to_string()).unwrap();
+}
+
 #[function_component(App)]
 fn app() -> Html {
     let canvas_ref = use_node_ref();
@@ -108,6 +124,7 @@ fn app() -> Html {
     let life = use_state(|| N_LIFES);
     let is_playing = use_state(|| false);
     let score = use_state(|| 0_u32);
+    let best_score = use_state(get_best_score);
     let restart_waiting = use_state(|| 0_u32);
 
     let (w, h) = *map_size;
@@ -186,6 +203,18 @@ fn app() -> Html {
             }
         });
     }
+
+    // 更新best_score
+    {
+        clone_all![score, best_score];
+        use_effect_with(score, move |score| {
+            if **score > *best_score {
+                best_score.set(**score);
+                set_best_score(**score);
+            }
+        });
+    }
+
     // 载入图片
     let img_onload = {
         let bird_image = bird_image.clone();
@@ -236,7 +265,8 @@ fn app() -> Html {
                     if let Some(bird) = bird_image.as_ref() {
                         if !*is_playing && *life < N_LIFES {
                             if *restart_waiting > 0 {
-                                restart_waiting.set(*restart_waiting - INTERV.min(*restart_waiting));
+                                restart_waiting
+                                    .set(*restart_waiting - INTERV.min(*restart_waiting));
                             }
                             return;
                         }
@@ -505,7 +535,8 @@ fn app() -> Html {
             <div class="no-select">
                 <img id="birdImage" src="static/bird.webp" onload={img_onload} />
                 <span id="lifeCnt"> {*life} </span>
-                <span id="score"> {format!("{:0>9}", *score)}</span>
+                <span class="score"> {format!("{:0>4}", *score)}</span>
+                <span class="score best_score"> {format!("{:0>4}", *best_score)}</span>
             </div>
             if !*is_playing {
                 <div id="hint" class="no-select">
