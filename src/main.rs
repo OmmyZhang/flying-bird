@@ -145,6 +145,7 @@ fn app() -> Html {
             history,
             obstacles,
             score,
+            life,
             audio_ref,
             audio_wall_ref,
             audio_after_ref
@@ -162,7 +163,7 @@ fn app() -> Html {
                     audio.set_volume(0.5);
                     let _ = audio.play().unwrap();
                 }
-            } else {
+            } else if *life < N_LIFES  {
                 if let Some(audio) = audio_ref.cast::<HtmlAudioElement>() {
                     audio.pause().unwrap();
                 }
@@ -475,13 +476,13 @@ fn app() -> Html {
                 onpointerdown={make_cb!(start_fly_core)}
                 onpointerup={make_cb!(end_fly_core)}
             />
-            <audio loop={true} ref={audio_ref}>
+            <audio loop={true} ref={audio_ref} preload={"auto"}>
                 <source src="static/fantasy_world.mp3" type="audio/mpeg" />
             </audio>
-            <audio ref={audio_wall_ref}>
+            <audio ref={audio_wall_ref} preload={"auto"}>
                 <source src="static/hitting_wall.mp3" type="audio/mpeg" />
             </audio>
-            <audio ref={audio_after_ref}>
+            <audio ref={audio_after_ref} preload={"auto"}>
                 <source src="static/string_end.mp3" type="audio/mpeg" />
             </audio>
             <div class="no-select">
