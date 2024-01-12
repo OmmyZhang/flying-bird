@@ -21,14 +21,14 @@ const BIRD_SIZE: f64 = 120.;
 const CHECK_SIZE: f64 = BIRD_SIZE / 2.0 + 5.0;
 const OB_WIDTH: f64 = 100.;
 const NEXT_OB_WIDTH: f64 = 20.;
-const HISTORY_LEN: usize = 120;
-const HISTORY_COLOR_CHANGE: usize = 7;
+const HISTORY_LEN: usize = 250;
+const HISTORY_COLOR_CHANGE: usize = 15;
 const MIN_SPACE: f64 = 3. * BIRD_SIZE;
-const INTERV: u32 = 17;
+const INTERV: u32 = 8;
 const V_MIN_2: f64 = 0.0;
-const V_MAX_2: f64 = 200.0;
-const ROTATE_UP: f64 = -0.05;
-const ROTATE_DOWN_D: f64 = 0.35;
+const V_MAX_2: f64 = 50.0;
+const ROTATE_UP: f64 = -0.022;
+const ROTATE_DOWN_D: f64 = 0.12;
 
 const N_LIFES: i32 = 10;
 
