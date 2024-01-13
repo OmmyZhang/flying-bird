@@ -22,6 +22,7 @@ const NEXT_OB_COLOR: u8 = 190;
 
 const BIRD_SIZE: f64 = 128.;
 const H_BIRD_RATIO: f64 = 8.0;
+const MIN_W_BIRD_RATIO: f64 = 6.0;
 const MAX_BIRD_PX: f64 = 96.;
 const CHECK_SIZE: f64 = BIRD_SIZE / 2.0 + 5.0;
 const OB_WIDTH: f64 = 100.;
@@ -76,6 +77,7 @@ impl MapConfig {
     pub fn calc() -> Self {
         // 鸟的大小在canvas里面128以免太糊
         // 鸟的大小是屏幕高度的1/8，但不要超过200px
+        // 也不要超过屏幕宽度的1/6
         // 不去纠结devicePixelRatio了，反正鸟的清晰度有限
 
         console::log_1(&JsValue::from_str("calc map size"));
@@ -83,10 +85,9 @@ impl MapConfig {
         let screen_width = window().unwrap().inner_width().unwrap().as_f64().unwrap();
         let screen_height = window().unwrap().inner_height().unwrap().as_f64().unwrap();
 
-        let h = f64::max(
-            BIRD_SIZE * H_BIRD_RATIO,
-            screen_height * BIRD_SIZE / MAX_BIRD_PX,
-        );
+        let h = (BIRD_SIZE * H_BIRD_RATIO)
+            .max(screen_height * BIRD_SIZE / MAX_BIRD_PX)
+            .max(BIRD_SIZE * MIN_W_BIRD_RATIO * screen_height / screen_width);
 
         Self {
             h,
@@ -103,10 +104,9 @@ impl Obstacle {
         let last_y1 = last.map(|ob| ob.y1).unwrap_or(h / 3.0);
 
         let space = rng.gen_range(MIN_SPACE..1.5 * MIN_SPACE);
-        let max_dy = (dis / OB_WIDTH).powi(2) * BIRD_SIZE * 1.5;
+        let max_dy = (dis / OB_WIDTH).powi(2) * BIRD_SIZE;
         let y1 = rng.gen_range(
-            (last_y1 - max_dy).max(0.0).min(h - space - 1.0)
-                ..(last_y1 + max_dy).min(h - space),
+            (last_y1 - max_dy).max(0.0).min(h - space - 1.0)..(last_y1 + max_dy).min(h - space),
         );
 
         Self {
@@ -594,7 +594,7 @@ fn app() -> Html {
             </div>
             if !*is_playing {
                 <div id="hint" class="no-select">
-                    <p>{ "Tap the screen or press any key to fly" }</p>
+                    <p>{ "Tap or press any key to fly" }</p>
                 </div>
                 if *life == N_LIFES {
                     <div id="badges">
