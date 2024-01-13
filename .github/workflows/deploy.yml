@@ -1,4 +1,4 @@
-name: Auto Deploy
+name: Deploy
 
 on:
   push:
@@ -10,21 +10,45 @@ jobs:
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
-      - uses: actions/checkout@v3
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           target: wasm32-unknown-unknown
-      - name: "Install Trunk"
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Trunk
         uses: jetli/trunk-action@v0.4.0
         with:
           version: 'latest'
-      - name: "Build"
+      - name: Build
         run: trunk build --release --public-url="//cdn.jsdelivr.net/gh/ommyzhang/flying-bird@gh-pages/" --no-sri
-      - name: "Deploy"
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           commit_message: ${{ github.event.head_commit.message }}
+
+  itch_io:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Trunk
+        uses: jetli/trunk-action@v0.4.0
+        with:
+          version: 'latest'
+      - name: Build
+        run: trunk build --release --public-url="./"
+      - name: Push to itch.io
+        uses: manleydev/butler-publish-itchio-action@master
+        env:
+          BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
+          CHANNEL: html-beta
+          ITCH_GAME: flying-bird
+          ITCH_USER: ymmo
+          PACKAGE: dist
