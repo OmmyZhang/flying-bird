@@ -72,3 +72,19 @@ canvas {
   user-select: none;
   -webkit-user-select: none;
 }
+
+.fullscreen-btn {
+  z-index: 999;
+  cursor: pointer;
+  background: none;
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  opacity: .4;
+  border: none;
+}
+
+.fullscreen-btn img {
+  width: 36px;
+  height: 36px;
+}

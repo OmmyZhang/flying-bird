@@ -167,10 +167,13 @@ fn app() -> Html {
     let restart_waiting = use_state(|| 0_u32);
 
     let can_touch = use_memo((), |_| window().unwrap().navigator().max_touch_points() > 0);
+    let need_fullscreen_btn = use_state(|| false);
 
-    // 初始化canvas
+    let full_screen_callback = Callback::from(move |_| enter_fullscreen());
+
+    // 初始化canvas和window.onresize
     {
-        clone_all![canvas_ref, canvas_ctx, map_config];
+        clone_all![canvas_ref, canvas_ctx, map_config, need_fullscreen_btn];
         use_effect_with(canvas_ref, move |canvas_ref| {
             let canvas = canvas_ref
                 .cast::<HtmlCanvasElement>()
@@ -202,6 +205,17 @@ fn app() -> Html {
                 canvas.set_width(new_map_config.w as u32);
                 canvas.set_height(new_map_config.h as u32);
                 map_config.set(new_map_config);
+
+                need_fullscreen_btn.set(
+                    window()
+                        .unwrap()
+                        .document()
+                        .unwrap()
+                        .fullscreen_element()
+                        .is_none()
+                        && (window().unwrap().inner_height().unwrap().as_f64().unwrap() < 720.0
+                            || window().unwrap().inner_width().unwrap().as_f64().unwrap() < 720.0),
+                );
             }) as Box<dyn FnMut()>);
             window()
                 .unwrap()
@@ -226,9 +240,6 @@ fn app() -> Html {
         ];
         use_effect_with(is_playing, move |is_playing| {
             if **is_playing {
-                if window().unwrap().inner_height().unwrap().as_f64().unwrap() < 300.0 {
-                    enter_fullscreen();
-                }
                 pos.set(0.);
                 angle.set(0.);
                 history.set(vec![]);
@@ -596,12 +607,24 @@ fn app() -> Html {
             </div>
             if !*is_playing {
                 <div id="hint" class="no-select">
-                    if *can_touch {
-                        <p>{ "Tap to fly" }</p>
-                    } else {
-                        <p>{ "Click or press any key to fly" }</p>
-                    }
+                    <p>
+                        {
+                            if * can_touch
+                            {
+                                "Tap to fly"
+                            }
+                            else
+                            {
+                                "Click or press any key to fly"
+                            }
+                        }
+                    </p>
                 </div>
+                if *need_fullscreen_btn {
+                    <button class="fullscreen-btn" onclick={full_screen_callback}>
+                        <img src="static/enlarge.svg" />
+                    </button>
+                }
                 if *life == N_LIFES {
                     <div id="badges">
                         <a href="https://notbyai.fyi/">
