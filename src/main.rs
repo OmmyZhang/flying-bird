@@ -11,8 +11,8 @@ use web_sys::{
     HtmlImageElement,
 };
 use yew::{
-    callback::Callback, function_component, html, use_effect_with, use_node_ref, use_state, Html,
-    TargetCast,
+    callback::Callback, function_component, html, use_effect_with, use_memo, use_node_ref,
+    use_state, Html, TargetCast,
 };
 use yew_hooks::use_interval;
 
@@ -165,6 +165,8 @@ fn app() -> Html {
     let score = use_state(|| 0_u32);
     let best_score = use_state(get_best_score);
     let restart_waiting = use_state(|| 0_u32);
+
+    let can_touch = use_memo((), |_| window().unwrap().navigator().max_touch_points() > 0);
 
     // 初始化canvas
     {
@@ -594,7 +596,11 @@ fn app() -> Html {
             </div>
             if !*is_playing {
                 <div id="hint" class="no-select">
-                    <p>{ "Tap or press any key to fly" }</p>
+                    if *can_touch {
+                        <p>{ "Tap to fly" }</p>
+                    } else {
+                        <p>{ "Click or press any key to fly" }</p>
+                    }
                 </div>
                 if *life == N_LIFES {
                     <div id="badges">
